@@ -4,6 +4,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -58,12 +59,41 @@ func (app *config) createMenuItems(window fyne.Window) {
 	openMenuItem := fyne.NewMenuItem("Open...", func() {})
 
 	saveMenuItem := fyne.NewMenuItem("Save", func() {})
+	app.SaveMenuItem = saveMenuItem
+	app.SaveMenuItem.Disabled = true
 
-	saveAsMenuItem := fyne.NewMenuItem("Save as...", func() {})
+	saveAsMenuItem := fyne.NewMenuItem("Save as...", app.saveAsFunc(window))
 
 	fileMenu := fyne.NewMenu("File", openMenuItem, saveMenuItem, saveAsMenuItem)
 
 	menu := fyne.NewMainMenu(fileMenu)
 
 	window.SetMainMenu(menu)
+}
+
+// saveAsFunc returns a function that displays a file save dialog and saves the content of the EditWidget.
+func (app *config) saveAsFunc(window fyne.Window) func() {
+	return func() {
+		saveDialog := dialog.NewFileSave(func(write fyne.URIWriteCloser, err error) {
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			if write == nil {
+				// user canceled
+				return
+			}
+
+			// save file
+			write.Write([]byte(app.EditWidget.Text))
+			app.CurrentFile = write.URI()
+
+			defer write.Close()
+
+			window.SetTitle(window.Title() + " " + write.URI().Name())
+			app.SaveMenuItem.Disabled = false
+		}, window)
+		saveDialog.Show()
+	}
 }
