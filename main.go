@@ -61,7 +61,7 @@ func (app *config) makeUI() (*widget.Entry, *widget.RichText) {
 func (app *config) createMenuItems(window fyne.Window) {
 	openMenuItem := fyne.NewMenuItem("Open...", app.openFunc(window))
 
-	saveMenuItem := fyne.NewMenuItem("Save", func() {})
+	saveMenuItem := fyne.NewMenuItem("Save", app.saveFunc(window))
 	app.SaveMenuItem = saveMenuItem
 	app.SaveMenuItem.Disabled = true
 
@@ -76,6 +76,21 @@ func (app *config) createMenuItems(window fyne.Window) {
 
 // filter is a file filter for selecting Markdown files with the extensions .md and .MD.
 var filter = storage.NewExtensionFileFilter([]string{".md", ".MD"})
+
+// saveFunc returns a function that saves the contents of the EditWidget to the current file.
+func (app *config) saveFunc(window fyne.Window) func() {
+	return func() {
+		if app.CurrentFile != nil {
+			write, err := storage.Writer(app.CurrentFile)
+			if err != nil {
+				dialog.ShowError(err, window)
+			}
+
+			write.Write([]byte(app.EditWidget.Text))
+			defer write.Close()
+		}
+	}
+}
 
 // openFunc returns a function that displays a file open dialog and loads the content of the selected file into the EditWidget.
 func (app *config) openFunc(window fyne.Window) func() {
