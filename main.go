@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"io"
 )
 
 // config represents the configuration settings for the application.
@@ -56,7 +57,7 @@ func (app *config) makeUI() (*widget.Entry, *widget.RichText) {
 
 // createMenuItems creates and adds menu items to the main window.
 func (app *config) createMenuItems(window fyne.Window) {
-	openMenuItem := fyne.NewMenuItem("Open...", func() {})
+	openMenuItem := fyne.NewMenuItem("Open...", app.openFunc(window))
 
 	saveMenuItem := fyne.NewMenuItem("Save", func() {})
 	app.SaveMenuItem = saveMenuItem
@@ -69,6 +70,38 @@ func (app *config) createMenuItems(window fyne.Window) {
 	menu := fyne.NewMainMenu(fileMenu)
 
 	window.SetMainMenu(menu)
+}
+
+// openFunc returns a function that displays a file open dialog and loads the content of the selected file into the EditWidget.
+func (app *config) openFunc(window fyne.Window) func() {
+	return func() {
+		openDialog := dialog.NewFileOpen(func(read fyne.URIReadCloser, err error) {
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			// cancelled by user
+			if read == nil {
+				return
+			}
+			defer read.Close()
+
+			data, err := io.ReadAll(read)
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			app.EditWidget.SetText(string(data))
+
+			app.CurrentFile = read.URI()
+			window.SetTitle(window.Title() + " " + read.URI().Name())
+			app.SaveMenuItem.Disabled = false
+		}, window)
+
+		openDialog.Show()
+	}
 }
 
 // saveAsFunc returns a function that displays a file save dialog and saves the content of the EditWidget.
