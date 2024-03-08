@@ -5,8 +5,10 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"io"
+	"strings"
 )
 
 // config represents the configuration settings for the application.
@@ -72,6 +74,9 @@ func (app *config) createMenuItems(window fyne.Window) {
 	window.SetMainMenu(menu)
 }
 
+// filter is a file filter for selecting Markdown files with the extensions .md and .MD.
+var filter = storage.NewExtensionFileFilter([]string{".md", ".MD"})
+
 // openFunc returns a function that displays a file open dialog and loads the content of the selected file into the EditWidget.
 func (app *config) openFunc(window fyne.Window) func() {
 	return func() {
@@ -100,6 +105,7 @@ func (app *config) openFunc(window fyne.Window) func() {
 			app.SaveMenuItem.Disabled = false
 		}, window)
 
+		openDialog.SetFilter(filter)
 		openDialog.Show()
 	}
 }
@@ -118,6 +124,11 @@ func (app *config) saveAsFunc(window fyne.Window) func() {
 				return
 			}
 
+			if !strings.HasSuffix(strings.ToLower(write.URI().String()), ".md") {
+				dialog.ShowInformation("Error", "Please name your file with .md extension!", window)
+				return
+			}
+
 			// save file
 			write.Write([]byte(app.EditWidget.Text))
 			app.CurrentFile = write.URI()
@@ -127,6 +138,8 @@ func (app *config) saveAsFunc(window fyne.Window) func() {
 			window.SetTitle(window.Title() + " " + write.URI().Name())
 			app.SaveMenuItem.Disabled = false
 		}, window)
+		saveDialog.SetFileName("untitled.md")
+		saveDialog.SetFilter(filter)
 		saveDialog.Show()
 	}
 }
